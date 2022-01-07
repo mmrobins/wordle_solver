@@ -69,9 +69,10 @@ def use_full_dictionary
   end
 
   # could store this off in another file, but it's super fast anyway
-  File.readlines(dictionary_location).select do |word|
-    word.strip.length == 5
-  end.map(&:strip)
+  File.
+    readlines(dictionary_location).
+    map(&:strip).
+    select {|w| w.length == 5 }
 end
 
 # WARNING this could get out of date
@@ -82,12 +83,35 @@ end
 # 2. finding the js file (might change names since it appears to have hash in name)
 # 3. find where Aa La vars are assigned, parse that
 def use_hacked_wordle_dictionary
-  File.readlines("./manual_wordle_list.txt")
+  File.readlines("./manual_wordle_list.txt").map(&:strip)
 end
 
 # TODO could make this use a flag or something to toggle between dictionary
 five_letter_words = use_hacked_wordle_dictionary
 #five_letter_words = use_full_dictionary
+
+# simple score based on letter count in the word list
+def build_word_scores(word_list)
+  letter_frequency = {}
+
+  word_list.each do |w|
+    w.each_char do |c|
+      letter_frequency[c] ||= 0
+      letter_frequency[c] += 1
+    end
+  end
+
+  letter_frequency.sort_by {|c, count| count}
+
+  word_list.map do |w|
+    score = w.
+      chars.
+      uniq. # duplicate chars don't provide extra info
+      map {|c| letter_frequency[c]}.
+      sum
+    [w, score]
+  end.to_h
+end
 
 def apply_guess(guess_word, guess_result, possible_words)
   puts "Guess word: #{guess_word}"
@@ -114,16 +138,27 @@ def apply_guess(guess_word, guess_result, possible_words)
   possible_words
 end
 
+word_scores = build_word_scores(five_letter_words)
+
 possible_words = five_letter_words
 
 guesses.each do |guess_word, guess_result|
   possible_words = apply_guess(guess_word, guess_result, possible_words)
 end
 
-possible_words.each do |pw|
-  puts pw
-end
+words_to_show = 20
+top_n_index = [words_to_show, possible_words.count].min
 
+top_n_possible_words = possible_words.
+  map {|pw| [pw, word_scores[pw]]}.
+  sort_by {|pw, word_score| word_score}[-(top_n_index)..-1]
+
+top_n_possible_words.
+  each {|pw, score| puts "#{pw} - #{score}"}
+
+words_limited = possible_words.count > words_to_show ?
+  " (only showing top #{words_to_show} scoring words)" :
+  ""
 
 puts
-puts "#{possible_words.count} possible words"
+puts "#{possible_words.count} possible words#{words_limited}"
