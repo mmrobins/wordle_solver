@@ -59,12 +59,6 @@ guesses.each do |guess_word, guess_result|
   end
 end
 
-
-if guess_word.empty? || guess_result.empty?
-  puts doc
-  exit 1
-end
-
 # this has some weird words wordle doesn't use, but can't find a better source easily
 def use_full_dictionary
   dictionary_location = './words_alpha.txt'
@@ -82,11 +76,11 @@ end
 
 # WARNING this could get out of date
 # manually pulled this out of https://www.powerlanguage.co.uk/wordle/main.db1931a8.js
-# stored in a 'var Aa=["list","of","words"]' variable :-/
+# stored in a 'var Aa=["list","of","words"]; var La=[]' variables :-/
 # theoretically could automate 
 # 1. parsing the html
 # 2. finding the js file (might change names since it appears to have hash in name)
-# 3. find where Aa var is assigned, parse that
+# 3. find where Aa La vars are assigned, parse that
 def use_hacked_wordle_dictionary
   File.readlines("./manual_wordle_list.txt")
 end
