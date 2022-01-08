@@ -42,3 +42,21 @@ of code can download a full english dictionary
 
     #five_letter_words = use_full_dictionary
 
+Of course, this is all really a moot point since the answer to every single day
+is embedded in the javascript code for the website.  You can just pull each
+day's answer out of the browser's localstorage using the browser console
+
+    JSON.parse(localStorage.gameState).solution
+
+Or if you wanna see the answer for any given day, you can run a little
+javascript snippet (de-obfuscated from the original JS)
+
+    function solve(solveDate) {
+      var anchorDate = new Date(2021,5,19,0,0,0,0),
+          dateDiff = solveDate - anchorDate,
+          wordIndex = Math.floor(dateDiff / 864e5) % wordList.length;
+      return wordList[wordIndex];
+    }
+
+Just put the word list from this repo into a variable called `wordList` and run
+that function, passing in the whatever date you want the solution for
