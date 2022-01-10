@@ -57,121 +57,140 @@ Guess results must be 5 charactes of the form
     ~ = letter hit in wrong place
 HEREDOC
 
-guesses = ARGV.each_slice(2).to_a
+class Wordle
+  attr_reader :possible_words, :guessed_words, :word_scores
 
-guesses.each do |guess_word, guess_result|
-  if guess_word.to_s !~ /^[a-zA-Z]{5}$/
-    puts "Bad guess word '#{guess_word}'\n\n"
-    puts doc
-    exit 1
-  end
-  if guess_result.to_s !~ /^[xo~]{5}$/
-    puts "Bad guess result '#{guess_result}' (guess word #{guess_word})\n\n"
-    puts doc
-    exit 1
-  end
-end
-
-# this has some weird words wordle doesn't use, but can't find a better source easily
-def use_full_dictionary
-  dictionary_location = './words_alpha.txt'
-  unless File.exists?(dictionary_location)
-    require 'open-uri'
-    download = URI.open('https://github.com/dwyl/english-words/raw/master/words_alpha.txt')
-    IO.copy_stream(download, dictionary_location) # maybe put in tmp dir?
+  def initialize
+    # TODO could make this use a flag or something to toggle between dictionary
+    @possible_words = use_hacked_wordle_dictionary
+    #five_letter_words = use_full_dictionary
+    @word_scores = build_word_scores(@possible_words)
+    @guessed_words = []
   end
 
-  # could store this off in another file, but it's super fast anyway
-  File.
-    readlines(dictionary_location).
-    map(&:strip).
-    select {|w| w.length == 5 }
-end
+  # simple score based on letter count in the word list
+  def build_word_scores(word_list)
+    letter_frequency = {}
 
-# WARNING this could get out of date
-# manually pulled this out of https://www.powerlanguage.co.uk/wordle/main.db1931a8.js
-# stored in a 'var Aa=["list","of","words"]' variable :-/
-# theoretically could automate 
-# 1. parsing the html
-# 2. finding the js file (might change names since it appears to have hash in name)
-# 3. find where Aa var is assigned, parse that
-def use_hacked_wordle_dictionary
-  File.readlines("./manual_wordle_list.txt").map(&:strip)
-end
-
-# TODO could make this use a flag or something to toggle between dictionary
-five_letter_words = use_hacked_wordle_dictionary
-#five_letter_words = use_full_dictionary
-
-# simple score based on letter count in the word list
-def build_word_scores(word_list)
-  letter_frequency = {}
-
-  word_list.each do |w|
-    w.each_char do |c|
-      letter_frequency[c] ||= 0
-      letter_frequency[c] += 1
-    end
-  end
-
-  letter_frequency.sort_by {|c, count| count}
-
-  word_list.map do |w|
-    score = w.
-      chars.
-      uniq. # duplicate chars don't provide extra info
-      map {|c| letter_frequency[c]}.
-      sum
-    [w, score]
-  end.to_h
-end
-
-def apply_guess(guess_word, guess_result, possible_words)
-  puts "Guess word: #{guess_word}"
-  puts "Guess result: #{guess_result}"
-
-  guess_result.each_char.with_index do |char, i|
-    guess_char = guess_word[i]
-
-    if char == '~'
-      possible_words.select! do |w|
-        w[i] != guess_char && w.include?(guess_word[i])
+    word_list.each do |w|
+      w.each_char do |c|
+        letter_frequency[c] ||= 0
+        letter_frequency[c] += 1
       end
-    elsif char == 'x'
-      possible_words.reject! {|w| w.include?(guess_word[i])}
-    elsif char == 'o'
-      possible_words.select! {|w| w[i] == guess_char }
-    else
-      puts "not sure how to handle a guess with the character #{char}"
+    end
+
+    letter_frequency.sort_by {|c, count| count}
+
+    word_list.map do |w|
+      score = w.
+        chars.
+        uniq. # duplicate chars don't provide extra info
+        map {|c| letter_frequency[c]}.
+        sum
+      [w, score]
+    end.to_h
+  end
+
+  def self.validate_guess(guess_word, guess_result)
+    if guess_word.to_s !~ /^[a-zA-Z]{5}$/
+      puts "Bad guess word '#{guess_word}'\n\n"
+      puts doc
+      exit 1
+    end
+    if guess_result.to_s !~ /^[xo~]{5}$/
+      puts "Bad guess result '#{guess_result}' (guess word #{guess_word})\n\n"
+      puts doc
+      exit 1
     end
   end
 
+  # this has some weird words wordle doesn't use, but can't find a better source easily
+  def use_full_dictionary
+    dictionary_location = './words_alpha.txt'
+    unless File.exists?(dictionary_location)
+      require 'open-uri'
+      download = URI.open('https://github.com/dwyl/english-words/raw/master/words_alpha.txt')
+      IO.copy_stream(download, dictionary_location) # maybe put in tmp dir?
+    end
 
-  puts "#{possible_words.count} possible words\n\n"
-  possible_words
+    # could store this off in another file, but it's super fast anyway
+    File.
+      readlines(dictionary_location).
+      map(&:strip).
+      select {|w| w.length == 5 }
+  end
+
+  # WARNING this could get out of date
+  # manually pulled this out of https://www.powerlanguage.co.uk/wordle/main.db1931a8.js
+  # stored in a 'var Aa=["list","of","words"]' variable :-/
+  # theoretically could automate 
+  # 1. parsing the html
+  # 2. finding the js file (might change names since it appears to have hash in name)
+  # 3. find where Aa var is assigned, parse that
+  def use_hacked_wordle_dictionary
+    File.readlines("./manual_wordle_list.txt").map(&:strip)
+  end
+
+
+  def apply_guesses(guesses)
+    guesses.each do |guess_word, guess_result|
+      puts "Guess word: #{guess_word}"
+      puts "Guess result: #{guess_result}"
+
+      apply_guess(guess_word, guess_result)
+      puts "#{@possible_words.count} possible words\n\n"
+    end
+  end
+
+  def apply_guess(guess_word, guess_result)
+    self.class.validate_guess(guess_word, guess_result)
+
+    guess_result.each_char.with_index do |char, i|
+      guess_char = guess_word[i]
+
+      if char == '~'
+        @possible_words.select! do |w|
+          w[i] != guess_char && w.include?(guess_word[i])
+        end
+      elsif char == 'x'
+        @possible_words.reject! {|w| w.include?(guess_word[i])}
+      elsif char == 'o'
+        @possible_words.select! {|w| w[i] == guess_char }
+      else
+        raise "not sure how to handle a guess with the character #{char}"
+      end
+    end
+  end
+
+  def possible_words_with_scores
+    @possible_words.
+      map {|pw| [pw, @word_scores[pw]]}.
+      sort_by {|pw, word_score| word_score}
+  end
+
+  def print_top_n_possible_words(words_to_show = 20)
+    top_n_index = [words_to_show, @possible_words.count].min
+    top_n_possible_words = possible_words_with_scores[-(top_n_index)..-1]
+    top_n_possible_words.
+      each {|pw, score| puts "#{pw} - #{score}"}
+
+    words_limited = @possible_words.count > words_to_show ?
+      " (only showing top #{words_to_show} scoring words)" :
+      ""
+
+    puts
+    puts "#{@possible_words.count} possible words#{words_limited}"
+  end
 end
 
-word_scores = build_word_scores(five_letter_words)
+unless ENV['TEST'] == 'true'
+  wordle = Wordle.new
 
-possible_words = five_letter_words
+  guesses = ARGV.each_slice(2).to_a
+  guesses.each do |guess_word, guess_result|
+    Wordle.validate_guess(guess_word, guess_result)
+  end
 
-guesses.each do |guess_word, guess_result|
-  possible_words = apply_guess(guess_word, guess_result, possible_words)
+  wordle.apply_guesses(guesses)
+  wordle.print_top_n_possible_words
 end
-
-words_to_show = 20
-top_n_index = [words_to_show, possible_words.count].min
-
-top_n_possible_words = possible_words.
-  map {|pw| [pw, word_scores[pw]]}.
-  sort_by {|pw, word_score| word_score}[-(top_n_index)..-1]
-
-top_n_possible_words.
-  each {|pw, score| puts "#{pw} - #{score}"}
-
-words_limited = possible_words.count > words_to_show ?
-  " (only showing top #{words_to_show} scoring words)" :
-  ""
-
-puts
-puts "#{possible_words.count} possible words#{words_limited}"
