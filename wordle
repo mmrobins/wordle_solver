@@ -6,21 +6,26 @@ guess_word = ARGV[0].to_s
 guess_result = ARGV[1].to_s
 
 doc = <<-HEREDOC
-  run this with 2 args per guess, the guess word and guess result
+run this with 2 args per guess, the guess word and guess result
 
-  e.g. one guess:
+e.g. one guess:
 
-    $ ./wordle their xo~~x
+    % ./wordle their xo~~x
     Guess word: their
     Guess result: xo~~x
-    22 possible words:
+    7 possible words
 
-    cheki
-    chide
-    chief
-    ...
+    chief - 3000
+    whine - 3063
+    chime - 3086
+    chide - 3163
+    while - 3207
+    shied - 3355
+    shine - 3537
 
-  e.g. two guesses:
+    7 possible words
+
+e.g. two guesses:
 
     $ ./wordle their xo~~x whine oooxo
     Guess word: their
@@ -31,13 +36,21 @@ doc = <<-HEREDOC
     Guess result: oooxo
     1 possible words
 
-    while
+    while - 3207
 
-  and you'll get the remaining possible words as output
+If you just wanna know the best first word to try based on letter frequency you can run it without any arguments
 
-  Guess words must be 5 letters
+    % ./wordle
+    ...
+    irate - 4511
+    arose - 4534
+    alter - 4559
+    alert - 4559
+    later - 4559
 
-  Guess results must be 5 charactes of the form
+Guess words must be 5 letters
+
+Guess results must be 5 charactes of the form
 
     x = letter miss
     o = letter hit in right place
