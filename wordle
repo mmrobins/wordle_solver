@@ -5,58 +5,6 @@
 guess_word = ARGV[0].to_s
 guess_result = ARGV[1].to_s
 
-doc = <<-HEREDOC
-run this with 2 args per guess, the guess word and guess result
-
-e.g. one guess:
-
-    % ./wordle their xo~~x
-    Guess word: their
-    Guess result: xo~~x
-    7 possible words
-
-    chief - 3000
-    whine - 3063
-    chime - 3086
-    chide - 3163
-    while - 3207
-    shied - 3355
-    shine - 3537
-
-    7 possible words
-
-e.g. two guesses:
-
-    $ ./wordle their xo~~x whine oooxo
-    Guess word: their
-    Guess result: xo~~x
-    7 possible words
-
-    Guess word: whine
-    Guess result: oooxo
-    1 possible words
-
-    while - 3207
-
-If you just wanna know the best first word to try based on letter frequency you can run it without any arguments
-
-    % ./wordle
-    ...
-    irate - 4511
-    arose - 4534
-    alter - 4559
-    alert - 4559
-    later - 4559
-
-Guess words must be 5 letters
-
-Guess results must be 5 charactes of the form
-
-    x = letter miss
-    o = letter hit in right place
-    ~ = letter hit in wrong place
-HEREDOC
-
 class Wordle
   attr_reader :possible_words, :guessed_words, :word_scores
 
@@ -66,6 +14,60 @@ class Wordle
     #five_letter_words = use_full_dictionary
     @word_scores = build_word_scores(@possible_words)
     @guessed_words = []
+  end
+
+  def self.doc
+    <<-HEREDOC
+    run this with 2 args per guess, the guess word and guess result
+
+    e.g. one guess:
+
+        % ./wordle their xo~~x
+        Guess word: their
+        Guess result: xo~~x
+        7 possible words
+
+        chief - 3000
+        whine - 3063
+        chime - 3086
+        chide - 3163
+        while - 3207
+        shied - 3355
+        shine - 3537
+
+        7 possible words
+
+    e.g. two guesses:
+
+        $ ./wordle their xo~~x whine oooxo
+        Guess word: their
+        Guess result: xo~~x
+        7 possible words
+
+        Guess word: whine
+        Guess result: oooxo
+        1 possible words
+
+        while - 3207
+
+    If you just wanna know the best first word to try based on letter frequency you can run it without any arguments
+
+        % ./wordle
+        ...
+        irate - 4511
+        arose - 4534
+        alter - 4559
+        alert - 4559
+        later - 4559
+
+    Guess words must be 5 letters
+
+    Guess results must be 5 charactes of the form
+
+        x = letter miss
+        o = letter hit in right place
+        ~ = letter hit in wrong place
+    HEREDOC
   end
 
   # simple score based on letter count in the word list
@@ -93,13 +95,15 @@ class Wordle
 
   def self.validate_guess(guess_word, guess_result)
     if guess_word.to_s !~ /^[a-zA-Z]{5}$/
-      puts "Bad guess word '#{guess_word}'\n\n"
       puts doc
+      puts
+      puts "Bad guess word '#{guess_word}'\n\n"
       exit 1
     end
     if guess_result.to_s !~ /^[xo~]{5}$/
-      puts "Bad guess result '#{guess_result}' (guess word #{guess_word})\n\n"
       puts doc
+      puts
+      puts "Bad guess result '#{guess_result}' (guess word #{guess_word})\n\n"
       exit 1
     end
   end
@@ -187,10 +191,6 @@ unless ENV['TEST'] == 'true'
   wordle = Wordle.new
 
   guesses = ARGV.each_slice(2).to_a
-  guesses.each do |guess_word, guess_result|
-    Wordle.validate_guess(guess_word, guess_result)
-  end
-
   wordle.apply_guesses(guesses)
   wordle.print_top_n_possible_words
 end
