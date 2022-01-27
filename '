@@ -153,14 +153,12 @@ class Wordle
 
       if res == '~'
         @possible_words.select! do |w|
-          w[i] != guess_char && w.include?(guess_char)
+          w[i] != guess_char && w.include?(guess_word[i])
         end
       elsif res == 'x'
-        @possible_words.select! do |pw|
-          pw_char_match_index = (pw =~ /#{guess_char}/)
-          guess_word_char_index = (guess_word =~ /#{guess_char}/)
-          double_guessed_letter_first_index = (guess_word_char_index < i)
-          pw_char_match_index == nil || double_guessed_letter_first_index
+        @possible_words.reject! do |w|
+          char_match_index = (w =~ /#{guess_word[i]}/)
+          char_match_index >= i
         end
       elsif res == 'o'
         @possible_words.select! {|w| w[i] == guess_char }

@@ -4,39 +4,45 @@ load(File.expand_path('../wordle', File.dirname(__FILE__)))
 
 class MagicBallTest < Minitest::Test
   def setup
-    @wordle = Wordle.new
+    @dict = %w{
+      alert
+      robot
+      train
+      cause
+    }
+    @wordle = Wordle.new(@dict)
+  end
+
+  def test_before_guess
+    @dict.each do |word|
+      assert_includes(@wordle.possible_words, word)
+    end
   end
 
   def test_no_match
-    elim_words = [
-      'alert',
-      'robot',
-      'train',
-    ]
-    elim_words.each do |word|
-      assert_includes(@wordle.possible_words, word)
-    end
-
     @wordle.apply_guess('alert', 'xxxxx')
 
-    elim_words.each do |word|
-      refute_includes(@wordle.possible_words, word)
-    end
+    assert @wordle.possible_words == []
   end
 
   def test_partial_match
-    elim_words = [
-      'alert',
-      'robot'
-    ]
-    elim_words.each do |word|
-      assert_includes(@wordle.possible_words, word)
-    end
+    @wordle.apply_guess('qqqqt', 'xxxx~')
+    assert @wordle.possible_words == ['train']
+  end
 
-    @wordle.apply_guess('alert', 'xxxx~')
+  def test_exact_match
+    @wordle.apply_guess('qqqqt', 'xxxxo')
+    assert @wordle.possible_words == ['alert', 'robot']
+  end
 
-    elim_words.each do |word|
-      refute_includes(@wordle.possible_words, word)
-    end
+  def test_double_letter_guess_one_exact_match
+    @wordle.apply_guess('qaqsq', 'xoxox')
+    assert_includes(@wordle.possible_words, 'cause')
+  end
+
+  def test_double_letter_guess_one_partial_match
+    @wordle.apply_guess('tqtqt', '~xxxx')
+    assert_includes(@wordle.possible_words, 'alert')
+    assert_includes(@wordle.possible_words, 'robot')
   end
 end
