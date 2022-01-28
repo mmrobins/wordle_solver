@@ -156,11 +156,27 @@ class Wordle
           w[i] != guess_char && w.include?(guess_char)
         end
       elsif res == 'x'
-        @possible_words.select! do |pw|
-          pw_char_match_index = (pw =~ /#{guess_char}/)
-          guess_word_char_index = (guess_word =~ /#{guess_char}/)
-          double_guessed_letter_first_index = (guess_word_char_index < i)
-          pw_char_match_index == nil || double_guessed_letter_first_index
+        @possible_words.reject! do |pw|
+          alt_guess_char_indexes = [] # if we guess the same char multiple times gets complicated
+          guess_word.scan(/#{guess_char}/) do |c|
+            match_index = Regexp.last_match.offset(0).first
+            alt_guess_char_indexes << match_index if match_index != i
+          end
+          if alt_guess_char_indexes.empty?
+            pw =~ /#{guess_char}/
+          else
+            alts = alt_guess_char_indexes.map do |alt_i|
+              alt_guess_res = guess_result[alt_i]
+              if alt_guess_res == 'o'
+                false
+              elsif alt_guess_res == '~'
+                alt_i > i
+              elsif alt_guess_res == 'x'
+                false
+              end
+            end
+            alts.all?
+          end
         end
       elsif res == 'o'
         @possible_words.select! {|w| w[i] == guess_char }
