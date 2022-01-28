@@ -6,7 +6,7 @@ guess_word = ARGV[0].to_s
 guess_result = ARGV[1].to_s
 
 class Wordle
-  attr_reader :guessed_words, :word_scores
+  attr_reader :guessed_words, :word_scores, :letter_frequency
   attr_accessor :possible_words
 
   def initialize(possible_words = nil)
@@ -71,22 +71,22 @@ class Wordle
 
   # simple score based on letter count in the word list
   def build_word_scores(word_list)
-    letter_frequency = {}
+    @letter_frequency ||= {}
 
     word_list.each do |w|
       w.each_char do |c|
-        letter_frequency[c] ||= 0
-        letter_frequency[c] += 1
+        @letter_frequency[c] ||= 0
+        @letter_frequency[c] += 1
       end
     end
 
-    letter_frequency.sort_by {|c, count| count}
+    @letter_frequency.sort_by {|c, count| count}
 
     word_list.map do |w|
       score = w.
         chars.
         uniq. # duplicate chars don't provide extra info
-        map {|c| letter_frequency[c]}.
+        map {|c| @letter_frequency[c]}.
         sum
       [w, score]
     end.to_h
@@ -150,6 +150,11 @@ class Wordle
 
     guess_result.each_char.with_index do |res, i|
       guess_char = guess_word[i]
+      alt_guess_char_indexes = [] # if we guess the same char multiple times gets complicated
+      guess_word.scan(/#{guess_char}/) do |c|
+        match_index = Regexp.last_match.offset(0).first
+        alt_guess_char_indexes << match_index if match_index != i
+      end
 
       if res == '~'
         @possible_words.select! do |w|
@@ -157,11 +162,6 @@ class Wordle
         end
       elsif res == 'x'
         @possible_words.reject! do |pw|
-          alt_guess_char_indexes = [] # if we guess the same char multiple times gets complicated
-          guess_word.scan(/#{guess_char}/) do |c|
-            match_index = Regexp.last_match.offset(0).first
-            alt_guess_char_indexes << match_index if match_index != i
-          end
           if alt_guess_char_indexes.empty?
             pw =~ /#{guess_char}/
           else
@@ -175,7 +175,7 @@ class Wordle
                 false
               end
             end
-            alts.all?
+            alts.any?
           end
         end
       elsif res == 'o'
@@ -184,6 +184,8 @@ class Wordle
         raise "not sure how to handle a guess with the character #{char}"
       end
     end
+    @word_scores = build_word_scores(@possible_words)
+    @possible_words
   end
 
   def possible_words_with_scores
